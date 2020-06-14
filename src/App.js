@@ -1,25 +1,42 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import AppBar from './component/Appbar';
+import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
+import Export from './component/Export';
+import Report from './component/Report';
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    flexGrow: 1,
+  },
+  paper: {
+    padding: theme.spacing(2),
+    textAlign: 'center',
+    color: theme.palette.text.secondary,
+  },
+}));
 
 function App() {
+  const classes = useStyles();
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <div className={classes.root}>
+      <AppBar />
+      <Grid
+        container
+      // direction="row-reverse"
+      // justify="center"
+      // alignItems="center"
+      >
+        <Grid item xs={8}>
+          <Report />
+        </Grid>
+        <Grid item xs={4}>
+
+          <Export />
+        </Grid>
+      </Grid>
+    </div >
   );
 }
 
