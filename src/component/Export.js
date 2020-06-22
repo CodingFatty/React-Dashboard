@@ -4,6 +4,7 @@ import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
+import Button from '@material-ui/core/Button';
 
 const useStyles = makeStyles((theme) => ({
     formControl: {
@@ -16,11 +17,12 @@ const useStyles = makeStyles((theme) => ({
 }));
 export default function Export() {
     const classes = useStyles();
-    const [age, setAge] = React.useState('');
+    const [format, setFormat] = React.useState('pdf');
 
     const handleChange = (event) => {
-        setAge(event.target.value);
+        setFormat(event.target.value);
     };
+
     return (
         <div>
             <div>
@@ -31,13 +33,17 @@ export default function Export() {
                 <Select
                     labelId="demo-simple-select-label"
                     id="demo-simple-select"
-                    value={1}
+                    value={format}
                     onChange={handleChange}
                 >
-                    <MenuItem value={10}>PDF</MenuItem>
-                    <MenuItem value={20}>CSV</MenuItem>
+                    <MenuItem value={"pdf"}>PDF</MenuItem>
+                    <MenuItem value={"csv"}>CSV</MenuItem>
                 </Select>
+                <Button variant="contained" color="primary" style = {{color: "white", background:"blue"}}>
+                    EXPORT
+                </Button>
             </FormControl>
+
         </div>
     )
 }
