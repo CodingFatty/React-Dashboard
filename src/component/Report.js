@@ -1,4 +1,4 @@
-import React, {userState, useEffect} from 'react';
+import React, {userState, useEffect, useContext} from 'react';
 import moment from 'moment';
 import { makeStyles } from '@material-ui/core/styles';
 import InputLabel from '@material-ui/core/InputLabel';
@@ -9,6 +9,9 @@ import Autocomplete from '@material-ui/lab/Autocomplete';
 import TextField from '@material-ui/core/TextField';
 import Input from '@material-ui/core/Input';
 import Button from '@material-ui/core/Button';
+import imageContext from '../context/image-context';
+import html2canvas from 'html2canvas';
+import jspdf from 'jspdf';
 import { BarChart, Legend, AreaChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 const useStyles = makeStyles((theme) => ({
@@ -69,7 +72,7 @@ const filterFunc = (filterData, time) => {
 export default function Report() {
     const classes = useStyles();
     const [date, setDate] = React.useState(0);
-    const [repo, setRepo] = React.useState([repoOptions[0]]);
+    const [repo, setRepo] = React.useState([]);
     const [filteredCommitData, setFilteredCommitData] = React.useState({
         name: "Commit Received Over Time",
         commitData
@@ -78,14 +81,19 @@ export default function Report() {
         name: "Pull Request Activity By Type",
         pullData
     });
+    const {state, dispatch} = useContext(imageContext);
 
-    const filterDate = (event) => {
+    const renderToDate = (timestamp) => {
+        return moment.unix(timestamp).format("MMMM Do")
+    };
+
+    const filterDate = async (event) => {
         setDate(event.target.value);
         setFilteredCommitData({...filteredCommitData, commitData: filterFunc(commitData, event.target.value) })
         setFilteredPullData({...filteredPullData, pullData: filterFunc(pullData, event.target.value) })
     };
 
-    const filterRepo = (event, value) => {
+    const filterRepo = async (event, value) => {
         if (value.length > 1 && value[0] === "All") {
             setRepo(value.filter(val => val !== "All"))
         } else if (value[value.length - 1]==="All") {
@@ -94,89 +102,98 @@ export default function Report() {
             setRepo(value)    
         }
     };
-    const renderToDate = (timestamp) => {
-        return moment.unix(timestamp).format("MMMM Do")
-    };
 
-    const titleChange = (title, value) => {
+    const titleChange = async (title, value) => {
         if (title === "commitData") {
             setFilteredCommitData({...filteredCommitData, name: value})
         } else {
             setFilteredPullData({...filteredPullData, name: value})
         }
     }
+    useEffect(()=>{
+        (async function exportGraph() {
+            setTimeout(async() => {
+                await html2canvas(document.getElementById("export-graph")).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jspdf();
+                    pdf.addImage(imgData, 'PNG', 0, 0);
+                    dispatch({ type: 'UPDATE_GRAPH' , graph: pdf })
+                })
+            }, 2000);
+        })()
+    }, [date, repo, filteredCommitData])
 
     return (
         <div>
             <div>
                 <h2>Report Creator</h2>
             </div>
-            <div className={classes.optionBar}>
-                <Autocomplete
-                    className={classes.filterForm}
-                    multiple
-                    id="tags-outlined"
-                    options={repoOptions}
-                    getOptionLabel={(option) => option}
-                    filterSelectedOptions
-                    value={repo}
-                    onChange={filterRepo}
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            variant="outlined"
-                            label="Select Repo"
-                            placeholder="Repository"
-                        />
-                    )}
-                />
-                <FormControl className={classes.formControl}>
-                    <InputLabel id="demo-simple-select-label">Select Time</InputLabel>
-                    <Select
-                        labelId="demo-simple-select-label"
-                        id="demo-simple-select"
-                        value={date}
-                        onChange={filterDate}
-                    >
-                        <MenuItem value={0}>All Time</MenuItem>
-                        <MenuItem value={10}>Last 7 Days</MenuItem>
-                        <MenuItem value={20}>Last Month</MenuItem>
-                    </Select>
-                </FormControl>
-            </div>
+            <div id="export-graph">
+                <div className={classes.optionBar}>
+                    <Autocomplete
+                        className={classes.filterForm}
+                        multiple
+                        id="tags-outlined"
+                        options={repoOptions}
+                        getOptionLabel={(option) => option}
+                        filterSelectedOptions
+                        value={repo}
+                        onChange={filterRepo }
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                variant="outlined"
+                                label="Select Repo"
+                                placeholder="Repository"
+                            />
+                        )}
+                    />
+                    <FormControl className={classes.formControl}>
+                        <InputLabel id="demo-simple-select-label">Select Time</InputLabel>
+                        <Select
+                            labelId="demo-simple-select-label"
+                            id="demo-simple-select"
+                            value={date}
+                            onChange={filterDate }
+                        >
+                            <MenuItem value={0}>All Time</MenuItem>
+                            <MenuItem value={10}>Last 7 Days</MenuItem>
+                            <MenuItem value={20}>Last Month</MenuItem>
+                        </Select>
+                    </FormControl>
+                </div>
 
-            <div>
-                {(repo.includes("repo1") || repo.includes("All")) && 
-                    <div>
-                        {/* <h4>Commit Received Over Time</h4> */}
-                        <Input defaultValue={filteredCommitData.name} style = {{width: "50%"}} inputProps={{ 'aria-label': 'description' }} onChange={(event) => titleChange("commitData", event.target.value)}/>
-                        <AreaChart width={800} height={200} data={filteredCommitData.commitData}
-                            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="timestamp" tickFormatter={renderToDate}/>
-                            <YAxis />
-                            <Tooltip labelFormatter={(value) => renderToDate(value)}/>
-                            <Area type='monotone' dataKey='commit' stroke='#82ca9d' fill='#82ca9d' />
-                        </AreaChart>
-                    </div>
-                }
-                {(repo.includes("repo2") || repo.includes("All")) && 
-                    <div>
-                        {/* <h4>Pull Request Activity By Type</h4> */}
-                        <Input defaultValue={filteredPullData.name} style = {{width: "50%"}} inputProps={{ 'aria-label': 'description' }} onChange={(event) => titleChange("pullData", event.target.value)}/>
-                        <BarChart width={800} height={300} data={filteredPullData.pullData}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="timestamp" tickFormatter={renderToDate}/>
-                            <YAxis />
-                            <Tooltip labelFormatter={(value) => renderToDate(value)}/>
-                            <Legend />
-                            <Bar dataKey="push" stackId="a" fill="#8884d8" />
-                            <Bar dataKey="pull" stackId="a" fill="#82ca9d" />
-                            <Bar dataKey="star" stackId="a" fill="#964B00" />
-                        </BarChart>
-                    </div>
-                }
+                <div>
+                    {(repo.includes("repo1") || repo.includes("All")) && 
+                        <div>
+                            <Input defaultValue={filteredCommitData.name} style = {{width: "50%"}} inputProps={{ 'aria-label': 'description' }} onChange={(event) => titleChange("commitData", event.target.value)}/>
+                            <AreaChart width={800} height={200} data={filteredCommitData.commitData}
+                                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="timestamp" tickFormatter={renderToDate}/>
+                                <YAxis />
+                                <Tooltip labelFormatter={(value) => renderToDate(value)}/>
+                                <Area type='monotone' dataKey='commit' stroke='#82ca9d' fill='#82ca9d' />
+                            </AreaChart>
+                        </div>
+                    }
+                    {(repo.includes("repo2") || repo.includes("All")) && 
+                        <div>
+                            <Input defaultValue={filteredPullData.name} style = {{width: "50%"}} inputProps={{ 'aria-label': 'description' }} onChange={(event) => titleChange("pullData", event.target.value)}/>
+                            <BarChart width={800} height={300} data={filteredPullData.pullData}
+                                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="timestamp" tickFormatter={renderToDate}/>
+                                <YAxis />
+                                <Tooltip labelFormatter={(value) => renderToDate(value)}/>
+                                <Legend />
+                                <Bar dataKey="push" stackId="a" fill="#8884d8" />
+                                <Bar dataKey="pull" stackId="a" fill="#82ca9d" />
+                                <Bar dataKey="star" stackId="a" fill="#964B00" />
+                            </BarChart>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     )
