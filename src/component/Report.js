@@ -8,7 +8,7 @@ import Select from '@material-ui/core/Select';
 import Autocomplete from '@material-ui/lab/Autocomplete';
 import TextField from '@material-ui/core/TextField';
 import Input from '@material-ui/core/Input';
-import Button from '@material-ui/core/Button';
+// import Button from '@material-ui/core/Button';
 import imageContext from '../context/image-context';
 import html2canvas from 'html2canvas';
 import jspdf from 'jspdf';
@@ -111,14 +111,34 @@ export default function Report() {
         }
     }
     useEffect(()=>{
-        (async function exportGraph() {
+        (async () => {
             setTimeout(async() => {
-                await html2canvas(document.getElementById("export-graph")).then(canvas => {
+                await html2canvas(document.getElementById("export-graph")).then(async canvas => {
                     const imgData = canvas.toDataURL('image/png');
                     const pdf = new jspdf();
                     pdf.addImage(imgData, 'PNG', 0, 0);
                     dispatch({ type: 'UPDATE_GRAPH' , graph: pdf })
                 })
+
+                let totalGraph = [];
+                for (let item of repo){
+                    if (item === "All") {
+                        let capture = repoOptions.filter(value => value !== "All")
+                        for (let option of capture){
+                            await html2canvas(document.getElementById(option)).then(async canvas => {
+                                const imgData = canvas.toDataURL('image/png');
+                                totalGraph.push(imgData)
+                            })
+                        }
+                    } else {
+                        await html2canvas(document.getElementById(item)).then(async canvas => {
+                            const imgData = canvas.toDataURL('image/png');
+                            totalGraph.push(imgData)
+                        })
+                    }
+                }
+                console.log(totalGraph)
+                dispatch({ type: 'UPDATE_EXCELGRAPH' , ExcelGraph: totalGraph })
             }, 2000);
         })()
     }, [date, repo, filteredCommitData])
@@ -127,6 +147,7 @@ export default function Report() {
         <div>
             <div>
                 <h2>Report Creator</h2>
+                {/* <CSVLink data={csvData} >Download me</CSVLink> */}
             </div>
             <div id="export-graph">
                 <div className={classes.optionBar}>
@@ -138,7 +159,7 @@ export default function Report() {
                         getOptionLabel={(option) => option}
                         filterSelectedOptions
                         value={repo}
-                        onChange={filterRepo }
+                        onChange={filterRepo}
                         renderInput={(params) => (
                             <TextField
                                 {...params}
@@ -165,7 +186,7 @@ export default function Report() {
 
                 <div>
                     {(repo.includes("repo1") || repo.includes("All")) && 
-                        <div>
+                        <div id="repo1">
                             <Input defaultValue={filteredCommitData.name} style = {{width: "50%"}} inputProps={{ 'aria-label': 'description' }} onChange={(event) => titleChange("commitData", event.target.value)}/>
                             <AreaChart width={800} height={200} data={filteredCommitData.commitData}
                                 margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -178,7 +199,7 @@ export default function Report() {
                         </div>
                     }
                     {(repo.includes("repo2") || repo.includes("All")) && 
-                        <div>
+                        <div id="repo2">
                             <Input defaultValue={filteredPullData.name} style = {{width: "50%"}} inputProps={{ 'aria-label': 'description' }} onChange={(event) => titleChange("pullData", event.target.value)}/>
                             <BarChart width={800} height={300} data={filteredPullData.pullData}
                                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
